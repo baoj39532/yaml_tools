@@ -1,0 +1,110 @@
+name: 构建多平台应用
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build-windows:
+    name: 构建Windows版本
+    runs-on: windows-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+    
+    - name: 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: 打包Windows应用
+      run: |
+        python build.py
+    
+    - name: 上传Windows构建产物
+      uses: actions/upload-artifact@v3
+      with:
+        name: K8s_YAML管理工具-Windows
+        path: dist/*.exe
+        retention-days: 30
+
+  build-macos:
+    name: 构建macOS版本
+    runs-on: macos-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+    
+    - name: 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: 打包macOS应用
+      run: |
+        python build.py
+    
+    - name: 压缩.app包
+      run: |
+        cd dist
+        zip -r K8s_YAML管理工具.app.zip K8s_YAML管理工具.app
+    
+    - name: 上传macOS构建产物
+      uses: actions/upload-artifact@v3
+      with:
+        name: K8s_YAML管理工具-macOS
+        path: dist/*.zip
+        retention-days: 30
+
+  build-linux:
+    name: 构建Linux版本
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+    
+    - name: 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: 打包Linux应用
+      run: |
+        python build.py
+    
+    - name: 添加执行权限
+      run: |
+        chmod +x dist/K8s_YAML管理工具
+    
+    - name: 压缩可执行文件
+      run: |
+        cd dist
+        tar -czf K8s_YAML管理工具-Linux.tar.gz K8s_YAML管理工具
+    
+    - name: 上传Linux构建产物
+      uses: actions/upload-artifact@v3
+      with:
+        name: K8s_YAML管理工具-Linux
+        path: dist/*.tar.gz
+        retention-days: 30
