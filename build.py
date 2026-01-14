@@ -7,6 +7,12 @@ import os
 import sys
 import subprocess
 
+# 设置UTF-8编码，解决Windows控制台中文显示问题
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 
 def build_exe():
     """构建可执行文件"""
