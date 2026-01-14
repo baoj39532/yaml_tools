@@ -28,7 +28,7 @@ def build_exe():
         sys.executable,  # 使用当前Python解释器
         '-m',
         'PyInstaller',
-        '--name=K8s_YAML管理工具',
+        '--name=K8s-YAML-Tool',
         '--onefile',  # 打包成单个文件
         '--windowed',  # GUI程序（不显示控制台）
         '--clean',  # 清理临时文件
@@ -51,11 +51,11 @@ def build_exe():
         print("\n打包完成！")
         
         if is_mac:
-            print("可执行文件位置: dist/K8s_YAML管理工具 或 dist/K8s_YAML管理工具.app")
+            print("可执行文件位置: dist/K8s-YAML-Tool 或 dist/K8s-YAML-Tool.app")
         elif is_windows:
-            print("可执行文件位置: dist/K8s_YAML管理工具.exe")
+            print("可执行文件位置: dist/K8s-YAML-Tool.exe")
         else:
-            print("可执行文件位置: dist/K8s_YAML管理工具")
+            print("可执行文件位置: dist/K8s-YAML-Tool")
             
     except subprocess.CalledProcessError as e:
         print(f"打包失败: {e}")

@@ -35,7 +35,7 @@ jobs:
     - name: 上传Windows构建产物
       uses: actions/upload-artifact@v4
       with:
-        name: K8s_YAML管理工具-Windows
+        name: K8s-YAML-Tool-Windows
         path: dist/*.exe
         retention-days: 30
 
@@ -64,12 +64,12 @@ jobs:
     - name: 压缩.app包
       run: |
         cd dist
-        zip -r K8s_YAML管理工具.app.zip K8s_YAML管理工具.app
+        zip -r K8s-YAML-Tool.app.zip K8s-YAML-Tool.app
     
     - name: 上传macOS构建产物
       uses: actions/upload-artifact@v4
       with:
-        name: K8s_YAML管理工具-macOS
+        name: K8s-YAML-Tool-macOS
         path: dist/*.zip
         retention-days: 30
 
@@ -97,16 +97,16 @@ jobs:
     
     - name: 添加执行权限
       run: |
-        chmod +x dist/K8s_YAML管理工具
+        chmod +x dist/K8s-YAML-Tool
     
     - name: 压缩可执行文件
       run: |
         cd dist
-        tar -czf K8s_YAML管理工具-Linux.tar.gz K8s_YAML管理工具
+        tar -czf K8s-YAML-Tool-Linux.tar.gz K8s-YAML-Tool
     
     - name: 上传Linux构建产物
       uses: actions/upload-artifact@v4
       with:
-        name: K8s_YAML管理工具-Linux
+        name: K8s-YAML-Tool-Linux
         path: dist/*.tar.gz
         retention-days: 30
