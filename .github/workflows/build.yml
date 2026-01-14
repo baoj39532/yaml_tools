@@ -31,7 +31,7 @@ jobs:
         python build.py
     
     - name: 上传Windows构建产物
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: K8s_YAML管理工具-Windows
         path: dist/*.exe
@@ -65,7 +65,7 @@ jobs:
         zip -r K8s_YAML管理工具.app.zip K8s_YAML管理工具.app
     
     - name: 上传macOS构建产物
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: K8s_YAML管理工具-macOS
         path: dist/*.zip
@@ -103,7 +103,7 @@ jobs:
         tar -czf K8s_YAML管理工具-Linux.tar.gz K8s_YAML管理工具
     
     - name: 上传Linux构建产物
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: K8s_YAML管理工具-Linux
         path: dist/*.tar.gz
