@@ -208,6 +208,65 @@ class ExtractorTab(QWidget):
             extract_configs.append(config)
         
         return extract_configs
+
+    def get_key_configs(self):
+        """获取可持久化的Key配置"""
+        configs = []
+        for row in range(self.key_table.rowCount()):
+            alias = self.key_table.cellWidget(row, 1).text().strip()
+            is_configmap = self.key_table.cellWidget(row, 2).isChecked()
+            if is_configmap:
+                file_key = self.key_table.cellWidget(row, 3).text().strip()
+                if not file_key:
+                    continue
+                configs.append({
+                    "key_path": "",
+                    "alias": alias,
+                    "is_configmap_file": True,
+                    "file_key": file_key,
+                    "file_type": self.key_table.cellWidget(row, 4).currentText(),
+                    "compare_key": "",
+                    "extract_key": self.key_table.cellWidget(row, 5).text().strip(),
+                })
+            else:
+                key_path = self.key_table.cellWidget(row, 0).text().strip()
+                if not key_path:
+                    continue
+                configs.append({
+                    "key_path": key_path,
+                    "alias": alias,
+                    "is_configmap_file": False,
+                    "file_key": "",
+                    "file_type": "text",
+                    "compare_key": "",
+                    "extract_key": "",
+                })
+        return configs
+
+    def set_key_configs(self, configs):
+        """从配置加载Key配置"""
+        self.key_table.setRowCount(0)
+        if not configs:
+            self.add_key_row()
+            return
+        for config in configs:
+            self.add_key_row()
+            row = self.key_table.rowCount() - 1
+            is_configmap = bool(config.get("is_configmap_file", False))
+            self.key_table.cellWidget(row, 1).setText(config.get("alias", ""))
+            if is_configmap:
+                self.key_table.cellWidget(row, 3).setText(config.get("file_key", ""))
+                file_type = config.get("file_type", "text")
+                combo = self.key_table.cellWidget(row, 4)
+                idx = combo.findText(file_type)
+                if idx >= 0:
+                    combo.setCurrentIndex(idx)
+                self.key_table.cellWidget(row, 5).setText(config.get("extract_key", ""))
+            else:
+                self.key_table.cellWidget(row, 0).setText(config.get("key_path", ""))
+            checkbox = self.key_table.cellWidget(row, 2)
+            checkbox.setChecked(is_configmap)
+            self.on_configmap_changed(row, Qt.Checked if is_configmap else Qt.Unchecked)
     
     def execute_extraction(self):
         """执行提取"""

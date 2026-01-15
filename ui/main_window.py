@@ -3,13 +3,15 @@
 """
 
 from PyQt5.QtWidgets import (QMainWindow, QTabWidget, QAction, QMessageBox,
-                             QDesktopWidget)
+                             QDesktopWidget, QFileDialog)
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QSettings
 from ui.tab_command_gen import CommandGeneratorTab
 from ui.tab_comparator import ComparatorTab
 from ui.tab_extractor import ExtractorTab
 from config import APP_NAME, APP_VERSION, WINDOW_WIDTH, WINDOW_HEIGHT
+from core.key_config_store import KeyConfigStore
+import os
 
 
 class MainWindow(QMainWindow):
@@ -17,6 +19,9 @@ class MainWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
+        self.settings = QSettings("YAMLTools", APP_NAME)
+        self.config_store = KeyConfigStore()
+        self.config_path = ""
         self.init_ui()
     
     def init_ui(self):
@@ -48,6 +53,9 @@ class MainWindow(QMainWindow):
         
         # 设置样式
         self.set_style()
+
+        # 启动时提示加载配置
+        self.prompt_load_config_on_start()
     
     def center(self):
         """窗口居中"""
@@ -62,6 +70,21 @@ class MainWindow(QMainWindow):
         
         # 文件菜单
         file_menu = menubar.addMenu("文件(&F)")
+
+        load_config_action = QAction("加载配置(&L)", self)
+        load_config_action.setStatusTip("加载YAML配置文件")
+        load_config_action.triggered.connect(self.load_config_dialog)
+        file_menu.addAction(load_config_action)
+
+        save_config_action = QAction("保存配置(&S)", self)
+        save_config_action.setStatusTip("保存当前配置")
+        save_config_action.triggered.connect(self.save_config)
+        file_menu.addAction(save_config_action)
+
+        save_as_config_action = QAction("配置另存为(&A)", self)
+        save_as_config_action.setStatusTip("将配置另存为YAML文件")
+        save_as_config_action.triggered.connect(self.save_config_as)
+        file_menu.addAction(save_as_config_action)
         
         exit_action = QAction("退出(&X)", self)
         exit_action.setShortcut("Ctrl+Q")
@@ -136,6 +159,91 @@ class MainWindow(QMainWindow):
         msg.setTextFormat(Qt.RichText)
         msg.setText(usage_text)
         msg.exec_()
+
+    def prompt_load_config_on_start(self):
+        """启动时提示加载配置"""
+        last_path = self.settings.value("last_config_path", "", type=str)
+        start_dir = os.path.dirname(last_path) if last_path else ""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "选择配置文件（可取消）",
+            start_dir,
+            "YAML配置 (*.yaml *.yml);;所有文件 (*)",
+        )
+        if file_path:
+            self.load_config(file_path)
+
+    def load_config_dialog(self):
+        """手动加载配置"""
+        last_path = self.settings.value("last_config_path", "", type=str)
+        start_dir = os.path.dirname(last_path) if last_path else ""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "选择配置文件",
+            start_dir,
+            "YAML配置 (*.yaml *.yml);;所有文件 (*)",
+        )
+        if file_path:
+            self.load_config(file_path)
+
+    def load_config(self, file_path: str):
+        """加载配置并同步到两个页面"""
+        configs = self.config_store.load(file_path)
+        if self.config_store.get_errors():
+            error_msg = "\n".join(self.config_store.get_errors())
+            QMessageBox.warning(self, "加载失败", error_msg)
+            self.config_store.clear_errors()
+            return
+
+        self.comparator_tab.set_key_configs(configs)
+        self.extractor_tab.set_key_configs(configs)
+        self.config_path = file_path
+        self.settings.setValue("last_config_path", file_path)
+        self.statusBar().showMessage(f"已加载配置: {os.path.basename(file_path)}")
+
+    def save_config(self):
+        """保存配置"""
+        if not self.config_path:
+            self.save_config_as()
+            return
+
+        self.save_config_to_path(self.config_path)
+
+    def save_config_as(self):
+        """另存为配置"""
+        last_path = self.settings.value("last_config_path", "", type=str)
+        start_dir = os.path.dirname(last_path) if last_path else ""
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "保存配置文件",
+            start_dir,
+            "YAML配置 (*.yaml *.yml);;所有文件 (*)",
+        )
+        if file_path:
+            self.save_config_to_path(file_path)
+
+    def save_config_to_path(self, file_path: str):
+        """保存配置到指定路径并同步页面"""
+        source_tab = self.tabs.currentWidget()
+        if source_tab == self.extractor_tab:
+            configs = self.extractor_tab.get_key_configs()
+        else:
+            configs = self.comparator_tab.get_key_configs()
+
+        # 保持两个页面一致
+        self.comparator_tab.set_key_configs(configs)
+        self.extractor_tab.set_key_configs(configs)
+
+        success = self.config_store.save(file_path, configs)
+        if not success:
+            error_msg = "\n".join(self.config_store.get_errors())
+            QMessageBox.warning(self, "保存失败", error_msg)
+            self.config_store.clear_errors()
+            return
+
+        self.config_path = file_path
+        self.settings.setValue("last_config_path", file_path)
+        self.statusBar().showMessage(f"已保存配置: {os.path.basename(file_path)}")
     
     def set_style(self):
         """设置样式"""
