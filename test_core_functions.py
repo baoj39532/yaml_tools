@@ -42,6 +42,19 @@ def test_yaml_parser():
         test_resource = resources[0]
         replicas = parser.extract_value_by_path(test_resource.yaml_content, "spec.replicas")
         print(f"  提取 spec.replicas = {replicas}")
+
+    # 测试带特殊字符的key解析（单引号包裹）
+    print("\n测试带特殊字符的key解析:")
+    sample_yaml = {
+        "metadata": {
+            "annotations": {
+                "app.cebpaas.io/last-replicas": "6"
+            }
+        }
+    }
+    special_key_path = "metadata.annotations.'app.cebpaas.io/last-replicas'"
+    special_value = parser.extract_value_by_path(sample_yaml, special_key_path)
+    print(f"  提取 {special_key_path} = {special_value}")
     
     if parser.get_errors():
         print("\n警告:")

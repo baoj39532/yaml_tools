@@ -193,7 +193,21 @@ class YAMLParser:
         while i < len(key_path):
             char = key_path[i]
             
-            if char == '.':
+            if char == "'":
+                # 支持单引号包裹的key，避免点号被拆分
+                if current:
+                    parts.append(current)
+                    current = ""
+                
+                # 查找右引号
+                j = i + 1
+                while j < len(key_path) and key_path[j] != "'":
+                    j += 1
+                
+                quoted = key_path[i + 1:j] if j <= len(key_path) else key_path[i + 1:]
+                parts.append(quoted)
+                i = j
+            elif char == '.':
                 if current:
                     parts.append(current)
                     current = ""
