@@ -14,24 +14,24 @@ class KeyConfigStore:
     def __init__(self):
         self.errors = []
 
-    def load(self, file_path: str) -> List[Dict[str, Any]]:
+    def load(self, file_path: str) -> Dict[str, Any]:
         """从YAML文件加载配置"""
         self.errors = []
         if not file_path or not os.path.exists(file_path):
             self.errors.append(f"配置文件不存在: {file_path}")
-            return []
+            return {"key_configs": [], "variables": []}
 
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
         except Exception as e:
             self.errors.append(f"读取配置失败: {str(e)}")
-            return []
+            return {"key_configs": [], "variables": []}
 
         items = data.get("key_configs", [])
         if not isinstance(items, list):
             self.errors.append("配置格式错误: key_configs必须是列表")
-            return []
+            return {"key_configs": [], "variables": []}
 
         normalized = []
         for item in items:
@@ -39,9 +39,24 @@ class KeyConfigStore:
                 continue
             normalized.append(self._normalize_item(item))
 
-        return normalized
+        variables = data.get("variables", [])
+        if not isinstance(variables, list):
+            self.errors.append("配置格式错误: variables必须是列表")
+            variables = []
 
-    def save(self, file_path: str, items: List[Dict[str, Any]]) -> bool:
+        normalized_vars = []
+        for item in variables:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name", "")).strip()
+            value = item.get("value", "")
+            if not name:
+                continue
+            normalized_vars.append({"name": name, "value": value})
+
+        return {"key_configs": normalized, "variables": normalized_vars}
+
+    def save(self, file_path: str, items: List[Dict[str, Any]], variables: List[Dict[str, Any]]) -> bool:
         """保存配置到YAML文件"""
         self.errors = []
         if not file_path:
@@ -51,6 +66,7 @@ class KeyConfigStore:
         data = {
             "version": 1,
             "key_configs": items or [],
+            "variables": variables or [],
         }
 
         try:

@@ -9,6 +9,7 @@ from PyQt5.QtCore import Qt, QSettings
 from ui.tab_command_gen import CommandGeneratorTab
 from ui.tab_comparator import ComparatorTab
 from ui.tab_extractor import ExtractorTab
+from ui.tab_variable_replacer import VariableReplacerTab
 from config import APP_NAME, APP_VERSION, WINDOW_WIDTH, WINDOW_HEIGHT
 from core.key_config_store import KeyConfigStore
 import os
@@ -46,10 +47,12 @@ class MainWindow(QMainWindow):
         self.command_gen_tab = CommandGeneratorTab()
         self.comparator_tab = ComparatorTab()
         self.extractor_tab = ExtractorTab()
+        self.variable_replacer_tab = VariableReplacerTab()
         
         self.tabs.addTab(self.command_gen_tab, "命令生成器")
         self.tabs.addTab(self.comparator_tab, "YAML比较器")
         self.tabs.addTab(self.extractor_tab, "信息提取器")
+        self.tabs.addTab(self.variable_replacer_tab, "变量替换器")
         
         # 设置样式
         self.set_style()
@@ -188,15 +191,19 @@ class MainWindow(QMainWindow):
 
     def load_config(self, file_path: str):
         """加载配置并同步到两个页面"""
-        configs = self.config_store.load(file_path)
+        config_data = self.config_store.load(file_path)
         if self.config_store.get_errors():
             error_msg = "\n".join(self.config_store.get_errors())
             QMessageBox.warning(self, "加载失败", error_msg)
             self.config_store.clear_errors()
             return
 
-        self.comparator_tab.set_key_configs(configs)
-        self.extractor_tab.set_key_configs(configs)
+        key_configs = config_data.get("key_configs", [])
+        variables = config_data.get("variables", [])
+
+        self.comparator_tab.set_key_configs(key_configs)
+        self.extractor_tab.set_key_configs(key_configs)
+        self.variable_replacer_tab.set_variables(variables)
         self.config_path = file_path
         self.settings.setValue("last_config_path", file_path)
         self.statusBar().showMessage(f"已加载配置: {os.path.basename(file_path)}")
@@ -234,7 +241,8 @@ class MainWindow(QMainWindow):
         self.comparator_tab.set_key_configs(configs)
         self.extractor_tab.set_key_configs(configs)
 
-        success = self.config_store.save(file_path, configs)
+        variables = self.variable_replacer_tab.get_variables()
+        success = self.config_store.save(file_path, configs, variables)
         if not success:
             error_msg = "\n".join(self.config_store.get_errors())
             QMessageBox.warning(self, "保存失败", error_msg)

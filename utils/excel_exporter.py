@@ -164,7 +164,7 @@ class ExcelExporter:
                                  output_dir: str) -> bool:
         """
         导出信息提取结果
-        按资源类型分文件，每个文件按资源名分Sheet
+        按资源类型分文件，每个文件为行式表格
         
         Args:
             extraction_results: 提取结果列表
@@ -198,54 +198,36 @@ class ExcelExporter:
     def _export_extraction_by_kind(self, kind: str, results: List[ExtractionResult], 
                                    output_dir: str):
         """导出单个资源类型的提取结果"""
-        # 按资源名分组
-        grouped_by_name = {}
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "提取结果"
+
+        # 收集所有key列
+        key_columns = []
         for result in results:
-            name = result.resource.name
-            if name not in grouped_by_name:
-                grouped_by_name[name] = []
-            grouped_by_name[name].append(result)
-        
-        # 处理Sheet数量限制
-        resource_names = list(grouped_by_name.keys())
-        file_count = 1
-        start_idx = 0
-        
-        while start_idx < len(resource_names):
-            wb = Workbook()
-            wb.remove(wb.active)  # 删除默认sheet
-            
-            end_idx = min(start_idx + MAX_SHEETS_PER_FILE, len(resource_names))
-            
-            for name in resource_names[start_idx:end_idx]:
-                results_for_name = grouped_by_name[name]
-                ws = wb.create_sheet(title=self._sanitize_sheet_name(name))
-                
-                # 写入表头
-                headers = ["提取Key（含别名）", "提取值"]
-                self._write_header(ws, headers)
-                
-                # 写入提取数据
-                row_idx = 2
-                for result in results_for_name:
-                    for key, value in result.extracted_values.items():
-                        ws.cell(row=row_idx, column=1, value=key)
-                        ws.cell(row=row_idx, column=2, value=str(value))
-                        row_idx += 1
-                
-                self._adjust_column_width(ws)
-            
-            # 保存文件
-            if len(resource_names) > MAX_SHEETS_PER_FILE:
-                filename = f"{kind}_提取结果_{file_count}.xlsx"
-            else:
-                filename = f"{kind}_提取结果.xlsx"
-            
-            output_path = os.path.join(output_dir, filename)
-            wb.save(output_path)
-            
-            start_idx = end_idx
-            file_count += 1
+            for key in result.extracted_values.keys():
+                if key not in key_columns:
+                    key_columns.append(key)
+
+        headers = ["集群名", "命名空间", "资源名"] + key_columns
+        self._write_header(ws, headers)
+
+        row_idx = 2
+        for result in results:
+            ws.cell(row=row_idx, column=1, value=result.resource.cluster)
+            ws.cell(row=row_idx, column=2, value=result.resource.namespace)
+            ws.cell(row=row_idx, column=3, value=result.resource.name)
+
+            for col_offset, key in enumerate(key_columns, start=4):
+                value = result.extracted_values.get(key, "")
+                ws.cell(row=row_idx, column=col_offset, value=str(value) if value is not None else "")
+            row_idx += 1
+
+        self._adjust_column_width(ws)
+
+        filename = f"{kind}_提取结果.xlsx"
+        output_path = os.path.join(output_dir, filename)
+        wb.save(output_path)
     
     def _write_header(self, ws, headers: List[str]):
         """写入表头并设置样式"""
