@@ -200,10 +200,12 @@ class MainWindow(QMainWindow):
 
         key_configs = config_data.get("key_configs", [])
         variables = config_data.get("variables", [])
+        multi_doc_separator = config_data.get("multi_doc_separator", ";")
 
         self.comparator_tab.set_key_configs(key_configs)
         self.extractor_tab.set_key_configs(key_configs)
         self.variable_replacer_tab.set_variables(variables)
+        self.extractor_tab.set_multi_doc_separator(multi_doc_separator)
         self.config_path = file_path
         self.settings.setValue("last_config_path", file_path)
         self.statusBar().showMessage(f"已加载配置: {os.path.basename(file_path)}")
@@ -242,7 +244,8 @@ class MainWindow(QMainWindow):
         self.extractor_tab.set_key_configs(configs)
 
         variables = self.variable_replacer_tab.get_variables()
-        success = self.config_store.save(file_path, configs, variables)
+        multi_doc_separator = self.extractor_tab.get_multi_doc_separator()
+        success = self.config_store.save(file_path, configs, variables, multi_doc_separator)
         if not success:
             error_msg = "\n".join(self.config_store.get_errors())
             QMessageBox.warning(self, "保存失败", error_msg)

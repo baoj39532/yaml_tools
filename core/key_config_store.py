@@ -19,19 +19,19 @@ class KeyConfigStore:
         self.errors = []
         if not file_path or not os.path.exists(file_path):
             self.errors.append(f"配置文件不存在: {file_path}")
-            return {"key_configs": [], "variables": []}
+            return {"key_configs": [], "variables": [], "multi_doc_separator": ";"}
 
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
         except Exception as e:
             self.errors.append(f"读取配置失败: {str(e)}")
-            return {"key_configs": [], "variables": []}
+            return {"key_configs": [], "variables": [], "multi_doc_separator": ";"}
 
         items = data.get("key_configs", [])
         if not isinstance(items, list):
             self.errors.append("配置格式错误: key_configs必须是列表")
-            return {"key_configs": [], "variables": []}
+            return {"key_configs": [], "variables": [], "multi_doc_separator": ";"}
 
         normalized = []
         for item in items:
@@ -54,9 +54,24 @@ class KeyConfigStore:
                 continue
             normalized_vars.append({"name": name, "value": value})
 
-        return {"key_configs": normalized, "variables": normalized_vars}
+        separator = data.get("multi_doc_separator", ";")
+        if separator is None:
+            separator = ";"
+        separator = str(separator)
 
-    def save(self, file_path: str, items: List[Dict[str, Any]], variables: List[Dict[str, Any]]) -> bool:
+        return {
+            "key_configs": normalized,
+            "variables": normalized_vars,
+            "multi_doc_separator": separator,
+        }
+
+    def save(
+        self,
+        file_path: str,
+        items: List[Dict[str, Any]],
+        variables: List[Dict[str, Any]],
+        multi_doc_separator: str,
+    ) -> bool:
         """保存配置到YAML文件"""
         self.errors = []
         if not file_path:
@@ -67,6 +82,7 @@ class KeyConfigStore:
             "version": 1,
             "key_configs": items or [],
             "variables": variables or [],
+            "multi_doc_separator": multi_doc_separator if multi_doc_separator is not None else ";",
         }
 
         try:

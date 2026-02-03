@@ -16,6 +16,7 @@ class InfoExtractor:
     def __init__(self):
         self.parser = YAMLParser()
         self.errors = []
+        self.multi_doc_separator = ";"
     
     def extract_from_path(self, path: str, 
                          extract_configs: List[Dict[str, Any]]) -> List[ExtractionResult]:
@@ -107,15 +108,23 @@ class InfoExtractor:
         elif file_type == 'yaml':
             # 解析YAML内容
             try:
-                yaml_obj = yaml.safe_load(file_content) if file_content else {}
-                
                 if extract_key:
-                    # 提取指定key
-                    value = self.parser.extract_value_by_path(yaml_obj, extract_key)
+                    # 多文档提取指定key
+                    values = []
+                    if file_content:
+                        for doc in yaml.safe_load_all(file_content):
+                            if doc is None:
+                                continue
+                            value = self.parser.extract_value_by_path(doc, extract_key)
+                            if value is not None:
+                                values.append(str(value))
                     full_path = f"data.{file_key}.{extract_key}"
-                    result.add_value(full_path, value, alias)
+                    separator = self.multi_doc_separator or ";"
+                    joined = separator.join(values) if values else None
+                    result.add_value(full_path, joined, alias)
                 else:
-                    # 提取整个YAML对象
+                    # 提取整个YAML对象（单文档）
+                    yaml_obj = yaml.safe_load(file_content) if file_content else {}
                     full_path = f"data.{file_key}"
                     result.add_value(full_path, yaml_obj, alias)
             

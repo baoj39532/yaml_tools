@@ -74,6 +74,18 @@ class ExtractorTab(QWidget):
         key_layout.addLayout(key_btn_layout)
         key_group.setLayout(key_layout)
         layout.addWidget(key_group)
+
+        # 多文档分隔符设置
+        separator_group = QGroupBox("多文档设置")
+        separator_layout = QHBoxLayout()
+        separator_label = QLabel("分隔符:")
+        self.multi_doc_separator_input = QLineEdit()
+        self.multi_doc_separator_input.setPlaceholderText("默认为 ;")
+        separator_layout.addWidget(separator_label)
+        separator_layout.addWidget(self.multi_doc_separator_input)
+        separator_layout.addStretch()
+        separator_group.setLayout(separator_layout)
+        layout.addWidget(separator_group)
         
         # 添加初始行
         self.add_key_row()
@@ -267,6 +279,17 @@ class ExtractorTab(QWidget):
             checkbox = self.key_table.cellWidget(row, 2)
             checkbox.setChecked(is_configmap)
             self.on_configmap_changed(row, Qt.Checked if is_configmap else Qt.Unchecked)
+
+    def get_multi_doc_separator(self) -> str:
+        """获取多文档分隔符"""
+        value = self.multi_doc_separator_input.text()
+        return value if value is not None else ""
+
+    def set_multi_doc_separator(self, separator: str):
+        """设置多文档分隔符"""
+        if separator is None:
+            separator = ""
+        self.multi_doc_separator_input.setText(str(separator))
     
     def execute_extraction(self):
         """执行提取"""
@@ -279,6 +302,8 @@ class ExtractorTab(QWidget):
         if not extract_configs:
             QMessageBox.warning(self, "警告", "请至少配置一个提取Key")
             return
+
+        self.extractor.multi_doc_separator = self.get_multi_doc_separator() or ";"
         
         self.status_label.setText("正在提取信息...")
         self.extraction_results = self.extractor.extract_from_path(
