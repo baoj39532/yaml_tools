@@ -3,11 +3,12 @@ Key提取器UI标签页
 """
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-                             QFileDialog, QGroupBox, QLabel, QTableWidget, 
-                             QTableWidgetItem, QMessageBox, QHeaderView)
+                             QFileDialog, QGroupBox, QLabel, QTreeWidget, 
+                             QTreeWidgetItem, QMessageBox, QHeaderView)
 from PyQt5.QtCore import Qt
 from core.key_extractor import KeyExtractor
 from utils.excel_exporter import ExcelExporter
+from typing import List, Dict
 import os
 
 
@@ -71,7 +72,7 @@ class KeyExtractorTab(QWidget):
         button_layout.addStretch()
         layout.addLayout(button_layout)
         
-        # 结果展示表格
+        # 结果展示树形控件
         result_group = QGroupBox("提取结果")
         result_layout = QVBoxLayout()
         
@@ -79,14 +80,14 @@ class KeyExtractorTab(QWidget):
         self.stats_label = QLabel("尚未提取")
         result_layout.addWidget(self.stats_label)
         
-        # Key列表表格
-        self.result_table = QTableWidget()
-        self.result_table.setColumnCount(2)
-        self.result_table.setHorizontalHeaderLabels(["序号", "Key"])
-        self.result_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.result_table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.result_table.setSelectionBehavior(QTableWidget.SelectRows)
-        result_layout.addWidget(self.result_table)
+        # Key树形结构
+        self.result_tree = QTreeWidget()
+        self.result_tree.setHeaderLabels(["Key层级结构"])
+        self.result_tree.header().setSectionResizeMode(QHeaderView.Stretch)
+        self.result_tree.setEditTriggers(QTreeWidget.NoEditTriggers)
+        self.result_tree.setSelectionBehavior(QTreeWidget.SelectRows)
+        self.result_tree.setAnimated(True)  # 启用动画
+        result_layout.addWidget(self.result_tree)
         
         result_group.setLayout(result_layout)
         layout.addWidget(result_group)
@@ -157,40 +158,76 @@ class KeyExtractorTab(QWidget):
             self.extract_btn.setEnabled(True)
     
     def display_keys(self):
-        """在表格中显示提取的Key"""
-        self.result_table.setRowCount(0)
+        """在树形控件中显示提取的Key"""
+        self.result_tree.clear()
         
         if not self.extracted_keys:
             self.stats_label.setText("未提取到任何Key")
             return
         
+        # 构建树形结构
+        tree_dict = self._build_tree_structure(self.extracted_keys)
+        
+        # 递归添加到QTreeWidget
+        self._add_tree_items(self.result_tree.invisibleRootItem(), tree_dict)
+        
+        # 展开所有节点
+        self.result_tree.expandAll()
+        
         # 更新统计信息
-        self.stats_label.setText(f"共提取 {len(self.extracted_keys)} 个去重后的Key（按字母序排列）")
+        self.stats_label.setText(f"共提取 {len(self.extracted_keys)} 个叶子节点Key（树形结构展示）")
+    
+    def _build_tree_structure(self, keys: List[str]) -> Dict:
+        """
+        将平铺的key列表转换为树形字典结构
         
-        # 填充表格
-        self.result_table.setRowCount(len(self.extracted_keys))
-        
-        for idx, key in enumerate(self.extracted_keys):
-            # 序号
-            seq_item = QTableWidgetItem(str(idx + 1))
-            seq_item.setTextAlignment(Qt.AlignCenter)
-            self.result_table.setItem(idx, 0, seq_item)
+        Args:
+            keys: 如 ["database.host", "database.port", "server.host"]
             
-            # Key
-            key_item = QTableWidgetItem(key)
-            self.result_table.setItem(idx, 1, key_item)
+        Returns:
+            嵌套字典：{
+                "database": {
+                    "host": {},
+                    "port": {}
+                },
+                "server": {
+                    "host": {}
+                }
+            }
+        """
+        tree = {}
+        for key in keys:
+            parts = key.split('.')
+            current = tree
+            for part in parts:
+                if part not in current:
+                    current[part] = {}
+                current = current[part]
+        return tree
+    
+    def _add_tree_items(self, parent_item, tree_dict: Dict):
+        """
+        递归添加树节点到QTreeWidget
         
-        # 自动调整第一列宽度
-        self.result_table.resizeColumnToContents(0)
+        Args:
+            parent_item: 父节点项
+            tree_dict: 树形字典
+        """
+        for key, subtree in sorted(tree_dict.items()):
+            item = QTreeWidgetItem(parent_item)
+            item.setText(0, key)
+            
+            if subtree:  # 有子节点
+                self._add_tree_items(item, subtree)
     
     def export_keys(self):
-        """导出Key列表到Excel"""
+        """导出Key列表到Excel（树形结构）"""
         if not self.extracted_keys:
             QMessageBox.warning(self, "警告", "没有可导出的Key")
             return
         
         # 选择保存路径
-        default_name = "configmap_keys.xlsx"
+        default_name = "configmap_keys_tree.xlsx"
         file_path, _ = QFileDialog.getSaveFileName(
             self, "保存Excel文件", default_name, "Excel文件 (*.xlsx)"
         )
@@ -201,10 +238,10 @@ class KeyExtractorTab(QWidget):
         try:
             self.status_label.setText("正在导出到Excel...")
             
-            # 导出
-            self.excel_exporter.export_key_list(self.extracted_keys, file_path)
+            # 使用树形导出方法
+            self.excel_exporter.export_key_tree(self.extracted_keys, file_path)
             
-            QMessageBox.information(self, "成功", f"Key列表已导出到：\n{file_path}")
+            QMessageBox.information(self, "成功", f"Key树形结构已导出到：\n{file_path}")
             self.status_label.setText(f"导出成功: {file_path}")
             
         except Exception as e:
@@ -214,7 +251,7 @@ class KeyExtractorTab(QWidget):
     def clear_results(self):
         """清除结果"""
         self.extracted_keys = []
-        self.result_table.setRowCount(0)
+        self.result_tree.clear()
         self.stats_label.setText("尚未提取")
         self.export_btn.setEnabled(False)
         self.status_label.setText("")

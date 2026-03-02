@@ -299,6 +299,116 @@ class ExcelExporter:
             self.errors.append(f"导出Key列表失败: {str(e)}")
             return False
     
+    def export_key_tree(self, keys: List[str], output_path: str) -> bool:
+        """
+        导出Key列表为树形结构到Excel（多列显示）
+        
+        Args:
+            keys: key列表（已排序的叶子节点）
+            output_path: 输出文件路径
+            
+        Returns:
+            是否成功
+        """
+        try:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Key树形结构"
+            
+            # 构建树形结构
+            tree = self._build_tree_dict(keys)
+            
+            # 获取最大深度（决定列数）
+            max_depth = self._get_max_depth(tree)
+            
+            # 设置表头
+            headers = [f"层级{i+1}" for i in range(max_depth)]
+            self._write_header(ws, headers)
+            
+            # 递归写入树形数据
+            current_row = 2
+            self._write_tree_rows(ws, tree, current_row, column_offset=1, max_depth=max_depth)
+            
+            # 自动调整列宽
+            self._adjust_column_width(ws)
+            
+            # 保存文件
+            wb.save(output_path)
+            return True
+            
+        except Exception as e:
+            self.errors.append(f"导出Key树形结构失败: {str(e)}")
+            return False
+    
+    def _build_tree_dict(self, keys: List[str]) -> dict:
+        """
+        将平铺key列表构建为嵌套字典
+        
+        Args:
+            keys: key列表
+            
+        Returns:
+            嵌套字典结构
+        """
+        tree = {}
+        for key in keys:
+            parts = key.split('.')
+            current = tree
+            for part in parts:
+                if part not in current:
+                    current[part] = {}
+                current = current[part]
+        return tree
+    
+    def _get_max_depth(self, tree: dict, current_depth: int = 1) -> int:
+        """
+        获取树的最大深度
+        
+        Args:
+            tree: 树形字典
+            current_depth: 当前深度
+            
+        Returns:
+            最大深度
+        """
+        if not tree:
+            return current_depth - 1
+        
+        max_sub_depth = current_depth
+        for subtree in tree.values():
+            if subtree:
+                depth = self._get_max_depth(subtree, current_depth + 1)
+                max_sub_depth = max(max_sub_depth, depth)
+        
+        return max_sub_depth
+    
+    def _write_tree_rows(self, ws, tree: dict, start_row: int, column_offset: int, max_depth: int) -> int:
+        """
+        递归写入树形结构到Excel行
+        
+        Args:
+            ws: worksheet对象
+            tree: 树形字典
+            start_row: 起始行号
+            column_offset: 列偏移量
+            max_depth: 最大深度
+            
+        Returns:
+            下一个可用行号
+        """
+        current_row = start_row
+        
+        for key, subtree in sorted(tree.items()):
+            # 写入当前节点
+            ws.cell(row=current_row, column=column_offset, value=key)
+            current_row += 1
+            
+            # 递归写入子节点
+            if subtree:
+                current_row = self._write_tree_rows(ws, subtree, current_row, column_offset + 1, max_depth)
+        
+        return current_row
+    
     def _sanitize_sheet_name(self, name: str) -> str:
         """清理Sheet名称，移除非法字符"""
         # Excel Sheet名称不能包含: : \ / ? * [ ]
