@@ -165,14 +165,14 @@ class KeyExtractor:
     
     def _extract_keys_recursively(self, obj, prefix: str = "") -> Set[str]:
         """
-        递归提取YAML对象中的所有key
+        递归提取YAML对象中的所有key（仅叶子节点）
         
         Args:
             obj: YAML对象（dict、list或其他类型）
             prefix: 当前key的前缀
             
         Returns:
-            提取的key集合
+            提取的key集合（仅包含叶子节点）
         """
         keys = set()
         
@@ -181,9 +181,12 @@ class KeyExtractor:
             for k, v in obj.items():
                 # 构建完整的key路径
                 current_key = f"{prefix}.{k}" if prefix else k
-                # 添加当前key
-                keys.add(current_key)
-                # 递归处理值
+                
+                # 只有当值不是dict且不是list时，才添加key（即叶子节点）
+                if not isinstance(v, dict) and not isinstance(v, list):
+                    keys.add(current_key)
+                
+                # 继续递归处理（处理嵌套的dict和list）
                 keys.update(self._extract_keys_recursively(v, current_key))
         elif isinstance(obj, list):
             # 列表类型：递归处理每个元素，但不添加索引
