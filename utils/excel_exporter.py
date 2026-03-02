@@ -263,6 +263,42 @@ class ExcelExporter:
             adjusted_width = min(max_length + 2, 50)
             ws.column_dimensions[column_letter].width = adjusted_width
     
+    def export_key_list(self, keys: List[str], output_path: str) -> bool:
+        """
+        导出Key列表到Excel
+        单列展示所有key，按字母序排列
+        
+        Args:
+            keys: key列表（已排序）
+            output_path: 输出文件路径
+            
+        Returns:
+            是否成功
+        """
+        try:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Key列表"
+            
+            # 设置表头
+            headers = ["Key"]
+            self._write_header(ws, headers)
+            
+            # 写入数据
+            for idx, key in enumerate(keys, start=2):
+                ws.cell(row=idx, column=1, value=key)
+            
+            # 自动调整列宽
+            self._adjust_column_width(ws)
+            
+            # 保存文件
+            wb.save(output_path)
+            return True
+            
+        except Exception as e:
+            self.errors.append(f"导出Key列表失败: {str(e)}")
+            return False
+    
     def _sanitize_sheet_name(self, name: str) -> str:
         """清理Sheet名称，移除非法字符"""
         # Excel Sheet名称不能包含: : \ / ? * [ ]

@@ -10,6 +10,7 @@ from ui.tab_command_gen import CommandGeneratorTab
 from ui.tab_comparator import ComparatorTab
 from ui.tab_extractor import ExtractorTab
 from ui.tab_variable_replacer import VariableReplacerTab
+from ui.tab_key_extractor import KeyExtractorTab
 from config import APP_NAME, APP_VERSION, WINDOW_WIDTH, WINDOW_HEIGHT
 from core.key_config_store import KeyConfigStore
 import os
@@ -48,11 +49,13 @@ class MainWindow(QMainWindow):
         self.comparator_tab = ComparatorTab()
         self.extractor_tab = ExtractorTab()
         self.variable_replacer_tab = VariableReplacerTab()
+        self.key_extractor_tab = KeyExtractorTab()
         
         self.tabs.addTab(self.command_gen_tab, "命令生成器")
         self.tabs.addTab(self.comparator_tab, "YAML比较器")
         self.tabs.addTab(self.extractor_tab, "信息提取器")
         self.tabs.addTab(self.variable_replacer_tab, "变量替换器")
+        self.tabs.addTab(self.key_extractor_tab, "Key提取器")
         
         # 设置样式
         self.set_style()
@@ -118,6 +121,8 @@ class MainWindow(QMainWindow):
             <li>YAML命令生成器：生成部署和删除命令</li>
             <li>YAML比较器：比较两个集群或文件的差异</li>
             <li>信息提取器：提取YAML中的指定信息</li>
+            <li>变量替换器：批量替换YAML中的变量</li>
+            <li>Key提取器：从ConfigMap中提取所有去重的key</li>
         </ul>
         <p>© 2024 YAML Tools. All rights reserved.</p>
         """
@@ -153,6 +158,23 @@ class MainWindow(QMainWindow):
             <li>点击"提取信息"</li>
             <li>点击"导出提取结果到Excel"</li>
         </ol>
+        
+        <h4>4. 变量替换器</h4>
+        <ol>
+            <li>选择集群文件夹、命名空间文件夹或单个文件</li>
+            <li>选择输出目录</li>
+            <li>配置变量名和值</li>
+            <li>点击"执行替换并导出"</li>
+        </ol>
+        
+        <h4>5. Key提取器</h4>
+        <ol>
+            <li>选择文件夹或文件</li>
+            <li>点击"提取Key"</li>
+            <li>查看提取结果（按字母序排列）</li>
+            <li>点击"导出到Excel"保存结果</li>
+        </ol>
+        <p>支持从ConfigMap中提取普通字符串、YAML和properties格式的key</p>
         
         <h4>文件夹结构要求</h4>
         <p>集群名/命名空间/资源类型/YAML文件</p>
