@@ -409,6 +409,41 @@ class ExcelExporter:
         
         return current_row
     
+    def export_annotated_config(self, lines: List, output_path: str) -> bool:
+        """
+        导出标注回写结果到Excel
+
+        Args:
+            lines: List[Tuple[str, str, str]] — (领域, 组件, 原内容行)
+            output_path: 输出文件路径
+
+        Returns:
+            是否成功
+        """
+        try:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "标注内容"
+
+            headers = ["所属领域", "所属组件", "原内容行"]
+            self._write_header(ws, headers)
+
+            for idx, item in enumerate(lines, start=2):
+                domain = item[0] if item[0] else ""
+                component = item[1] if item[1] else ""
+                raw_line = item[2] if item[2] is not None else ""
+                ws.cell(row=idx, column=1, value=domain)
+                ws.cell(row=idx, column=2, value=component)
+                ws.cell(row=idx, column=3, value=raw_line)
+
+            self._adjust_column_width(ws)
+            wb.save(output_path)
+            return True
+
+        except Exception as e:
+            self.errors.append(f"导出标注内容失败: {str(e)}")
+            return False
+
     def _sanitize_sheet_name(self, name: str) -> str:
         """清理Sheet名称，移除非法字符"""
         # Excel Sheet名称不能包含: : \ / ? * [ ]

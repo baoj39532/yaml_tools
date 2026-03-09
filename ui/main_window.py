@@ -10,6 +10,7 @@ from ui.tab_command_gen import CommandGeneratorTab
 from ui.tab_comparator import ComparatorTab
 from ui.tab_extractor import ExtractorTab
 from ui.tab_variable_replacer import VariableReplacerTab
+from ui.tab_annotation_applier import AnnotationApplierTab
 from ui.tab_key_extractor import KeyExtractorTab
 from config import APP_NAME, APP_VERSION, WINDOW_WIDTH, WINDOW_HEIGHT
 from core.key_config_store import KeyConfigStore
@@ -50,12 +51,14 @@ class MainWindow(QMainWindow):
         self.extractor_tab = ExtractorTab()
         self.variable_replacer_tab = VariableReplacerTab()
         self.key_extractor_tab = KeyExtractorTab()
-        
+        self.annotation_applier_tab = AnnotationApplierTab()
+
         self.tabs.addTab(self.command_gen_tab, "命令生成器")
         self.tabs.addTab(self.comparator_tab, "YAML比较器")
         self.tabs.addTab(self.extractor_tab, "信息提取器")
         self.tabs.addTab(self.variable_replacer_tab, "变量替换器")
         self.tabs.addTab(self.key_extractor_tab, "Key提取器")
+        self.tabs.addTab(self.annotation_applier_tab, "标注回写")
         
         # 设置样式
         self.set_style()
