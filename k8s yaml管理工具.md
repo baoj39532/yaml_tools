@@ -39,7 +39,7 @@ yaml比较器可比较任意两个集群文件夹下同命名空间名下相同�
 
 我需要针对不同的kind的yaml指定比较的key来定制化输出比较结果。注意一个yaml文件可能有多个kind，每个kind通过---进行分隔。
 
-对于每个kind，我可以定义类似a.b.c这种路径来定义需要比较的key的路径。支持数组下标（如a.b[0].c），也支持用单引号包裹特殊字符的key（如a.'b.c'.d）。
+对于每个kind，我可以定义类似a.b.c这种路径来定义需要比较的key的路径。支持数组下标（如a.b[0].c），支持用单引号包裹特殊字符的key（如a.'b.c'.d），同时支持按字段过滤数组元素（如`spec.template.spec.containers[name=app].image`、`containers[name=app].env[name=MY_POD_NAME].value`；过滤值含特殊字符时可加单引号：`containers[name='app-main'].image`）。当过滤条件匹配到多个元素时，信息提取器会使用"多文档分隔符"拼接所有匹配值。
 
 对于configmap, 或者secret，我可能会把文件名定义成key，value是文件内容以便挂载。此时用户可以填写key然后直接比较value文本，或者填写key以后选择文件类型（yaml或者properties）：不论是yaml格式或者properties格式，都可以写a.b.c的方式表示key路径。对于configmap或secret的比较结果，其实就可能会多一层文件名（直接文本比较除外）。
 

@@ -139,52 +139,70 @@ class YAMLParser:
             return parts[0]
         return ""
     
-    def extract_value_by_path(self, yaml_obj: Dict[str, Any], key_path: str) -> Any:
+    def extract_value_by_path(self, yaml_obj: Dict[str, Any], key_path: str,
+                              multi_separator: str = ";") -> Any:
         """
         根据路径提取YAML中的值
-        支持格式: a.b.c 或 a.b[0].c
-        
+        支持格式:
+            a.b.c
+            a.b[0].c                 数组下标
+            a.'b.c'.d                单引号包裹含特殊字符的key
+            a.list[name=app].b       按字段过滤数组元素
+            a.list[name='app-x'].b   过滤值含特殊字符时用单引号包裹
+
+        多个元素匹配过滤条件时，使用 multi_separator 拼接所有匹配值。
+
         Args:
             yaml_obj: YAML对象
             key_path: 键路径
-            
+            multi_separator: 多匹配值拼接分隔符（默认 ;）
+
         Returns:
-            提取的值，如果路径不存在返回None
+            提取的值，单值原样返回，多值以字符串拼接，路径不存在返回None
         """
         if not key_path:
             return None
-        
+
         try:
-            current = yaml_obj
-            
-            # 分割路径
             parts = self._parse_key_path(key_path)
-            
+            candidates: List[Any] = [yaml_obj]
+
             for part in parts:
-                if isinstance(part, int):
-                    # 数组索引
-                    if isinstance(current, list) and 0 <= part < len(current):
-                        current = current[part]
+                nxt: List[Any] = []
+                for item in candidates:
+                    if isinstance(part, tuple) and len(part) == 3 and part[0] == "filter":
+                        _, fk, fv = part
+                        if isinstance(item, list):
+                            for sub in item:
+                                if isinstance(sub, dict) and str(sub.get(fk)) == fv:
+                                    nxt.append(sub)
+                    elif isinstance(part, int):
+                        if isinstance(item, list) and 0 <= part < len(item):
+                            nxt.append(item[part])
                     else:
-                        return None
-                else:
-                    # 字典键
-                    if isinstance(current, dict):
-                        current = current.get(part)
-                        if current is None:
-                            return None
-                    else:
-                        return None
-            
-            return current
-            
+                        if isinstance(item, dict) and part in item:
+                            nxt.append(item[part])
+                candidates = nxt
+                if not candidates:
+                    return None
+
+            if len(candidates) == 1:
+                return candidates[0]
+
+            sep = multi_separator if multi_separator is not None else ";"
+            return sep.join("" if v is None else str(v) for v in candidates)
+
         except Exception:
             return None
-    
+
     def _parse_key_path(self, key_path: str) -> List:
         """
         解析键路径为部件列表
-        例如: "a.b[0].c" -> ["a", "b", 0, "c"]
+        支持:
+            "a.b[0].c"              -> ["a", "b", 0, "c"]
+            "a.'b.c'.d"             -> ["a", "b.c", "d"]
+            "a.list[name=app].b"    -> ["a", "list", ("filter","name","app"), "b"]
+            "a.list[name='x y'].b"  -> ["a", "list", ("filter","name","x y"), "b"]
         """
         parts = []
         current = ""
@@ -212,7 +230,7 @@ class YAMLParser:
                     parts.append(current)
                     current = ""
             elif char == '[':
-                # 处理数组索引
+                # 处理数组索引或过滤条件
                 if current:
                     parts.append(current)
                     current = ""
@@ -223,11 +241,10 @@ class YAMLParser:
                     j += 1
                 
                 if j < len(key_path):
-                    try:
-                        index = int(key_path[i+1:j])
-                        parts.append(index)
-                    except ValueError:
-                        pass
+                    token = key_path[i + 1:j]
+                    parsed = self._parse_bracket_token(token)
+                    if parsed is not None:
+                        parts.append(parsed)
                     i = j
             else:
                 current += char
@@ -238,6 +255,30 @@ class YAMLParser:
             parts.append(current)
         
         return parts
+
+    def _parse_bracket_token(self, token: str):
+        """解析方括号内的内容: 纯数字 -> int; k=v -> ('filter', k, v); 否则忽略"""
+        token = token.strip()
+        if not token:
+            return None
+
+        # 纯数字下标
+        try:
+            return int(token)
+        except ValueError:
+            pass
+
+        # k=v 过滤：查找等号
+        eq_idx = token.find('=')
+        if eq_idx > 0:
+            key = token[:eq_idx].strip().strip("'\"")
+            value = token[eq_idx + 1:].strip()
+            # 支持单/双引号包裹值
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+                value = value[1:-1]
+            if key:
+                return ("filter", key, value)
+        return None
     
     def get_errors(self) -> List[str]:
         """获取解析过程中的错误"""

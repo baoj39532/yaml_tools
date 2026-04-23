@@ -73,7 +73,9 @@ class InfoExtractor:
                 self._extract_configmap_file(resource, config, result)
             else:
                 # 普通key提取
-                value = self.parser.extract_value_by_path(resource.yaml_content, key_path)
+                value = self.parser.extract_value_by_path(
+                    resource.yaml_content, key_path, self.multi_doc_separator
+                )
                 result.add_value(key_path, value, alias)
         
         return result
@@ -115,7 +117,9 @@ class InfoExtractor:
                         for doc in yaml.safe_load_all(file_content):
                             if doc is None:
                                 continue
-                            value = self.parser.extract_value_by_path(doc, extract_key)
+                            value = self.parser.extract_value_by_path(
+                                doc, extract_key, self.multi_doc_separator
+                            )
                             if value is not None:
                                 values.append(str(value))
                     full_path = f"data.{file_key}.{extract_key}"
@@ -138,7 +142,9 @@ class InfoExtractor:
             
             if extract_key:
                 # 提取指定key
-                value = self.parser.extract_value_by_path(props, extract_key)
+                value = self.parser.extract_value_by_path(
+                    props, extract_key, self.multi_doc_separator
+                )
                 full_path = f"data.{file_key}.{extract_key}"
                 result.add_value(full_path, value, alias)
             else:

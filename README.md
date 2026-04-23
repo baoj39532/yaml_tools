@@ -15,7 +15,7 @@
 - 支持两种比较模式：
   - 集群文件夹比较
   - 单文件比较
-- 自定义比较Key（支持a.b.c路径格式、数组下标、单引号包裹特殊字符）
+- 自定义比较Key（支持a.b.c路径格式、数组下标、单引号包裹特殊字符、数组按字段过滤）
 - ConfigMap/Secret特殊处理：
   - 支持文件内容比较
   - 支持YAML和properties格式解析
@@ -125,6 +125,7 @@ dist/K8s_YAML管理工具.exe
    - 普通Key：直接输入路径，如`spec.replicas`
    - 支持数组下标，如`spec.template.spec.containers[0].name`
    - 支持单引号包裹特殊字符，如`metadata.annotations.'a.b.c'`
+   - 支持按字段过滤数组元素，如`spec.template.spec.containers[name=app].image`（值含特殊字符用单引号：`containers[name='app-main'].image`）
    - ConfigMap文件：勾选"ConfigMap文件"，填写文件名key和文件类型
 4. 点击"执行比较"
 5. 点击"导出比较结果到Excel"将结果保存
@@ -175,6 +176,9 @@ dist/K8s_YAML管理工具.exe
    - 使用点号分隔：`a.b.c`
    - 支持数组索引：`a.b[0].c`
    - 支持单引号包裹特殊字符：`a.'b.c'.d`
+   - 支持按字段过滤数组元素：`spec.containers[name=app].image`、`spec.containers[name=app].env[name=MY_POD_NAME].value`
+   - 过滤值含特殊字符时可加单引号：`containers[name='app-main'].resources.limits.memory`
+   - 多个元素匹配过滤条件时，信息提取器会用"多文档分隔符"拼接所有值
 
 ## 故障排除
 
